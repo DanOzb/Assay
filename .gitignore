@@ -7,8 +7,6 @@ build/
 ### IntelliJ IDEA ###
 .idea/*
 
-*.jar
-
 ### Kotlin ###
 .kotlin
 
