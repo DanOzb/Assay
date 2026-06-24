@@ -5,6 +5,8 @@ analysis-api = "2.3.0-dev-4967"
 intellij-platform = "241.19416.19"
 caffeine = "3.1.8"
 kotest = "6.2.1"
+json = "1.11.0"
+ktor = "3.5.0"
 
 
 [libraries]
@@ -36,5 +38,15 @@ caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "c
 kotest-runner = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotest" }
 kotest-assertions = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
 
+# Json
+json-serialization = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "json" }
+
+# ktor
+ktor-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor"}
+ktor-client-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor"}
+ktor-serialization = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor"}
+
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
