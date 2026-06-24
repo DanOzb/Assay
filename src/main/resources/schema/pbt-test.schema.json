@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PbtTestPlan",
+  "description": "A property-based test plan for one function. The model decides whether any property holds and, if so, selects invariants from a catalog. Code rendering is done deterministically by the host, not by the model.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "decision": {
+      "enum": ["generate", "skip"],
+      "description": "'generate' when at least one property holds; 'skip' when no general property holds for any input."
+    },
+    "skipReason": {
+      "type": "string",
+      "description": "Required when decision is 'skip'. A short explanation of why no property applies."
+    },
+    "invariants": {
+      "type": "array",
+      "description": "Required when decision is 'generate'. One entry per property that holds.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "involution",
+              "idempotent",
+              "commutative",
+              "associative",
+              "identity_element",
+              "length_preserving",
+              "permutation_invariant",
+              "never_throws",
+              "output_constraint",
+              "oracle",
+              "custom"
+            ],
+            "description": "Which property from the catalog. Use 'custom' only when nothing else fits."
+          },
+          "testName": {
+            "type": "string",
+            "description": "Human-readable description of the property, e.g. 'reverse is its own inverse'."
+          },
+          "args": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Exact parameter names from the signature that this property binds to, in order."
+          },
+          "value": {
+            "type": "string",
+            "description": "For 'identity_element': the identity literal as Kotlin source, e.g. \"0\" or \"\\\"\\\"\"."
+          },
+          "predicate": {
+            "type": "string",
+            "description": "For 'output_constraint': a Kotlin Boolean expression over `result` and parameter names, e.g. 'result >= 0'."
+          },
+          "reference": {
+            "type": "string",
+            "description": "For 'oracle': a Kotlin expression over the parameters computing the expected value independently of the function under test."
+          },
+          "code": {
+            "type": "string",
+            "description": "For 'custom' ONLY: a Kotlin assertion body executed inside checkAll with the parameters and `result` in scope."
+          }
+        },
+        "required": ["kind", "testName"]
+      }
+    }
+  },
+  "required": ["decision"]
+}
