@@ -7,8 +7,9 @@ The tool will be focused on property based testing for the first version.
 
 ## Status
 
-**Early development.** The ingestion stage via analysis API is working. 
-The rest of the pipeline is in progress.
+**!Early development!** 
+
+Check [docs/Architecture.md](https://github.com/DanOzb/Assay/blob/main/Docs/Architecture.md) for current progress
 
 ## What it does
 
@@ -22,11 +23,11 @@ target repo → Ingestion → Discovery/Classify → Synthesis (LLM generated te
             → Execution → Triage/Scoring → Reporting
 ```
 
-## Tech stack for now
+## Tech stack
 
 - **Language / runtime:** Kotlin on the JVM
 - **CLI:** [Clikt](https://ajalt.github.io/clikt/)
-- **Source analysis:** Kotlin compiler PSI / Analysis API
+- **Source analysis:** Kotlin compiler PSI & [Analysis API](https://kotlin.github.io/analysis-api/index_md.html)
 - **Test framework (for generated tests and for project code):** [Kotest](https://kotest.io/)
 
 ## Prerequisites
