@@ -16,7 +16,10 @@ class PbtGeneratorTest: FunSpec({
         receiver = null,
         returnType = "",
         visibility = "",
-        )
+        docs = null,
+        annotations = emptyList(),
+        body = null,
+    )
 
     val notEmpty = ParsedFunction(
         params = listOf(
@@ -28,6 +31,9 @@ class PbtGeneratorTest: FunSpec({
         receiver = "String",
         returnType = "",
         visibility = "",
+        docs = null,
+        annotations = emptyList(),
+        body = null,
     )
 
     test("format params renders 'none' when there is no params"){
