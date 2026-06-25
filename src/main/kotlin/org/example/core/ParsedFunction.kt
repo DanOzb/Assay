@@ -1,7 +1,12 @@
 package org.example.core
 
 data class ParsedParam(val name: String, val type: String)
+data class AnnotationModel(
+    val name: String,
+    val arguments: List<String> = emptyList()
+)
 
+//TODO: Needs to check for coroutines later
 data class ParsedFunction(
     val name: String,
     val fullName: String,
@@ -9,4 +14,7 @@ data class ParsedFunction(
     val params: List<ParsedParam>,
     val returnType: String,
     val visibility: String,
-)
+    val docs: String?,
+    val annotations: List<AnnotationModel>,
+    val body: String?,
+    )

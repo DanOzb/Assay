@@ -8,6 +8,7 @@ import org.jetbrains.kotlin.analysis.api.renderer.types.impl.KaTypeRendererForSo
 import org.jetbrains.kotlin.analysis.api.standalone.buildStandaloneAnalysisAPISession
 import org.jetbrains.kotlin.analysis.api.symbols.name
 import org.jetbrains.kotlin.analysis.project.structure.builder.buildKtSourceModule
+import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.platform.jvm.JvmPlatforms
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNamedFunction
@@ -70,7 +71,22 @@ class Parser {
             returnType = symbol.returnType.render(
                 KaTypeRendererForSource.WITH_SHORT_NAMES, Variance.INVARIANT
             ),
-            visibility = symbol.visibility.name
+            visibility = symbol.visibility.name,
+            docs = fn.docComment?.text,
+            annotations = fn.parseAnnotations(),
+            body = fn.bodyExpression?.text,
         )
     }
+
+    fun KtNamedFunction.parseAnnotations(): List<AnnotationModel> =
+        annotationEntries.map { entry ->
+            AnnotationModel(
+                name = entry.shortName?.asString() ?: entry.text,
+                arguments = entry.valueArguments.map { arg ->
+                    val argName = arg.getArgumentName()?.asName?.asString()
+                    val value = arg.getArgumentExpression()?.text.orEmpty()
+                    if(argName != null) "$argName=$value" else value
+                }
+            )
+        }
 }

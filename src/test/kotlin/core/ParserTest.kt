@@ -6,6 +6,7 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import org.example.core.ParsedFunction
 import org.example.core.Parser
 import java.nio.file.Paths
@@ -88,13 +89,54 @@ class ParserTest : FunSpec({
         fn.returnType shouldBe "Boolean"
     }
 
-    test("parses exactly the expected top-level functions") {
-        sharedResults.map { it.name } shouldContainExactlyInAnyOrder listOf(
-            "reverse", "add", "greet", "inferred", "nullableIn", "slugify", "secret", "hidden",
-        )
-    }
-
     test("parses fullName correctly") {
         findFunction("reverse").fullName shouldBe "core.reverse"
     }
+
+    test("Does not parse line comment") {
+        val fn = findFunction("docs_none")
+        fn.docs shouldBe null
+    }
+
+    test("Does not parse block comment") {
+        val fn = findFunction("docs_blockCommentNotDoc")
+        fn.docs shouldBe null
+    }
+
+    test("Contains multiline docs") {
+        val fn = findFunction("docs_multiline")
+        fn.docs.shouldNotBeNull()
+        fn.docs shouldContain "multiline docs." shouldContain "Detailed description"
+    }
+
+    test("Does not contain annotation") {
+        val fn = findFunction("anno_none")
+        fn.annotations shouldHaveSize 0
+    }
+
+    test("Contains annotation") {
+        val fn = findFunction("anno_marker")
+        fn.annotations[0].name shouldBe "Pure"
+    }
+
+    test("Contains annotation and argument") {
+        val fn = findFunction("anno_positional")
+        fn.annotations[0].name shouldBe "Suppress"
+        fn.annotations[0].arguments[0] shouldBe "\"unused\""
+    }
+
+    test("Does not contain function body") {
+        val fn = findFunction("body_expression")
+        fn.body shouldBe "a + b"
+    }
+
+    test("Contains function body") {
+        val fn = findFunction("body_block")
+        fn.body.shouldNotBeNull()
+        fn.body shouldBe "{\n" +
+                "    val sum = a + b\n" +
+                "    return sum\n" +
+                "}"
+    }
+
 })

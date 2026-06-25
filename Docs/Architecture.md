@@ -19,7 +19,10 @@ Ktor + Ollama models -> Invariant results
     val params: List<ParsedParam>,
     val returnType: String,
     val visibility: String,
-)
+    val docs: String?,
+    val annotations: List<AnnotationModel>,
+    val body: String?,
+    )
 ```    
 ### Pbt generation
 * Currently talks to the default ollama model for every parsed function. 
