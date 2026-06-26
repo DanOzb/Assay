@@ -57,3 +57,10 @@ fun body_block(a: Int, b: Int): Int {
 }
 
 fun body_expression(a: Int, b: Int): Int = a + b
+
+//SUSPEND
+
+suspend fun is_suspend(s: String): String
+
+fun is_not_suspend(s: String): String
+
