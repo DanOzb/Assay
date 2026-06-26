@@ -21,6 +21,8 @@ jobs:
               - '!**/*.md'
 
   build:
+    needs: changes
+    if: ${{ needs.changes.outputs.code == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
