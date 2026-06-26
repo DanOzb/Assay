@@ -6,7 +6,6 @@ data class AnnotationModel(
     val arguments: List<String> = emptyList()
 )
 
-//TODO: Needs to check for coroutines later
 data class ParsedFunction(
     val name: String,
     val fullName: String,
@@ -17,4 +16,5 @@ data class ParsedFunction(
     val docs: String?,
     val annotations: List<AnnotationModel>,
     val body: String?,
+    val isSuspend: Boolean,
     )

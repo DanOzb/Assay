@@ -19,6 +19,7 @@ class PbtGeneratorTest: FunSpec({
         docs = null,
         annotations = emptyList(),
         body = null,
+        isSuspend = false,
     )
 
     val notEmpty = ParsedFunction(
@@ -34,6 +35,7 @@ class PbtGeneratorTest: FunSpec({
         docs = null,
         annotations = emptyList(),
         body = null,
+        isSuspend = false,
     )
 
     test("format params renders 'none' when there is no params"){

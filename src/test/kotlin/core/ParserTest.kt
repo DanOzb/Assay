@@ -139,4 +139,14 @@ class ParserTest : FunSpec({
                 "}"
     }
 
+    test("Is a suspend function"){
+        val fn = findFunction("is_suspend")
+        fn.isSuspend shouldBe true
+    }
+
+    test("Is not a suspend function"){
+        val fn = findFunction("is_not_suspend")
+        fn.isSuspend shouldBe false
+    }
+
 })

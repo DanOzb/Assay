@@ -73,6 +73,7 @@ class Parser {
             docs = fn.docComment?.text,
             annotations = fn.parseAnnotations(),
             body = fn.bodyExpression?.text,
+            isSuspend = fn.hasModifier(KtTokens.SUSPEND_KEYWORD)
         )
     }
 
