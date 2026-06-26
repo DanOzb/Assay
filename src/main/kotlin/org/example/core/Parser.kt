@@ -10,6 +10,7 @@ import org.jetbrains.kotlin.analysis.api.symbols.name
 import org.jetbrains.kotlin.analysis.project.structure.builder.buildKtSourceModule
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.platform.jvm.JvmPlatforms
+import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.types.Variance
@@ -18,7 +19,6 @@ import java.nio.file.Path
 class Parser {
     fun inspectDir(path: Path): List<ParsedFunction>{
         val projectDisposable = Disposer.newDisposable("MyStandaloneAnalysisSession")
-        val parsedResults = mutableListOf<ParsedFunction>()
         try {
             val session = buildStandaloneAnalysisAPISession(projectDisposable = projectDisposable) {
                 buildKtModuleProvider {
@@ -37,17 +37,15 @@ class Parser {
 
             val ktFiles: List<KtFile> = session.modulesWithFiles.values.flatten().filterIsInstance<KtFile>()
 
-            for (file in ktFiles) {
-                for(fn in file.declarations.filterIsInstance<KtNamedFunction>()) {
-                    analyze(fn){
-                        parsedResults.add(parseFunction(fn))
-                    }
+            return ktFiles.flatMap { file ->
+                analyze(file){
+                    file.declarations.filterIsInstance<KtNamedFunction>()
+                        .map { parseFunction(it) }
                 }
             }
         } finally {
             Disposer.dispose(projectDisposable)
         }
-        return parsedResults
     }
 
     @OptIn(KaExperimentalApi::class)
