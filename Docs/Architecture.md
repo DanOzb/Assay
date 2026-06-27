@@ -1,5 +1,5 @@
 # System architecture
-MD file for visualizing current architecture 
+Doc for visualizing current architecture 
 
 ## Current Overview
 
@@ -10,7 +10,7 @@ Ktor + Ollama models -> Invariant results
 ## Components 
 
 ### Parsing
-* Currently parses TOP_LEVEL functions in a kotlin project and returns a list of parsed functions: 
+* Parses TOP_LEVEL functions in a kotlin project and returns a list of parsed functions: 
 ```
   ParsedFunction(
     val name: String,
@@ -22,11 +22,12 @@ Ktor + Ollama models -> Invariant results
     val docs: String?,
     val annotations: List<AnnotationModel>,
     val body: String?,
+    val isSuspend: Boolean,
     )
 ```    
 ### Pbt generation
-* Currently talks to the default ollama model for every parsed function. 
-* prompts models to generate invariants for property based testing 
+* Talks to the default ollama model for every parsed function. 
+* Prompts model to generate invariants for property based testing 
 
 ### Client
-* Currently only one client: Ollama, with an application content type as JSON
+* Only one client: Ollama, with an application content type as JSON
