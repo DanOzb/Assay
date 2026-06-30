@@ -1,0 +1,192 @@
+package org.example.gen.pbt.testGen
+
+import org.example.core.ParsedFunction
+import org.example.gen.pbt.models.Bound
+import org.example.gen.pbt.models.Invariant
+import org.example.gen.pbt.models.Rendered
+import org.example.gen.pbt.models.TypedSlot
+
+private const val RESULT_NAME = "result"
+
+
+/**
+ * Renders the Kotest assertion/s for one [invariant] over [fn].
+ *
+ * @param fn a parsed function
+ * @param invariant the invariant picked from the llm
+ * @return [Rendered] if invariant could be rendered, null otherwise.
+ */
+fun renderInvariant(fn: ParsedFunction, invariant: Invariant): Rendered? {
+    return when (invariant.kind) {
+        "involution", "idempotent" -> renderInvolutionOrIdempotent(fn, invariant)
+        "commutative" -> renderCommutative(fn)
+        "associative" -> renderAssociative(fn)
+        "identity_element" -> renderIdentityElement(fn, invariant)
+        "length_preserving" -> renderLengthPreserving(fn, invariant)
+        "permutation_invariant" -> renderPermutationInvariant(fn, invariant)
+        "never_throws" -> renderNeverThrows(fn)
+        "output_constraint" -> invariant.predicate?.let { renderWithResult(fn, "${invariant.predicate} shouldBe true") }
+        "oracle" -> invariant.reference?.let { renderWithResult(fn, "$RESULT_NAME shouldBe $it") }
+        "custom" -> invariant.code?.let {renderWithResult(fn, it)}
+        else -> null
+    }
+}
+
+private fun renderInvolutionOrIdempotent(fn: ParsedFunction, invariant: Invariant): Rendered? {
+    val b = signatureBounds(fn) ?: return null
+    if (b.size != 1) return null
+    val x = b.first().name
+    val once = callExpr(fn, listOf(x))
+    val body = if (invariant.kind == "involution")
+        "${callExpr(fn, listOf(once))} shouldBe $x"
+    else
+        "${callExpr(fn, listOf(once))} shouldBe $once"
+    return Rendered(b, listOf(body))
+}
+
+private fun renderCommutative(fn: ParsedFunction): Rendered? {
+    val ops = binaryOperandBounds(fn) ?: return null
+    val (a, c) = ops.map { it.name }
+    return Rendered(ops, listOf("${callExpr(fn, listOf(a, c))} shouldBe ${callExpr(fn, listOf(c, a))}"))
+}
+
+private fun renderAssociative(fn: ParsedFunction): Rendered? {
+    val slots = binaryOperandSlots(fn) ?: return null
+    val ops = boundsFor(slots) ?: return null
+    val third = freshName(ops.map { it.name }, "c")
+    val thirdArb = arbForType(slots.first().type) ?: return null
+    val bounds = ops + Bound(third, thirdArb)
+    val (a, b) = ops.map { it.name }
+    val left = callExpr(fn, listOf(callExpr(fn, listOf(a, b)), third))
+    val right = callExpr(fn, listOf(a, callExpr(fn, listOf(b, third))))
+    return Rendered(bounds, listOf("$left shouldBe $right"))
+}
+
+private fun renderIdentityElement(fn: ParsedFunction, invariant: Invariant): Rendered? {
+    val inv = invariant.value ?: return null
+    val slots = binaryOperandSlots(fn) ?: return null
+    val operand = slots.first()
+    val arb = arbForType(operand.type) ?: return null
+    val operandName = operand.name
+    return Rendered(
+        listOf(Bound(operandName, arb)),
+        listOf(
+            "${callExpr(fn, listOf(operandName, inv))} shouldBe $operandName",
+            "${callExpr(fn, listOf(inv, operandName))} shouldBe $operandName",
+        ),
+    )
+}
+
+private fun renderLengthPreserving(fn: ParsedFunction, invariant: Invariant): Rendered? {
+    val b = signatureBounds(fn) ?: return null
+    if (!hasSize(fn.returnType)) return null
+    val slot = resolveHintedSlot(fn, invariant.args.firstOrNull()) { hasSize(it.type) } ?: return null
+    val outputSize = withSizeAccess(callExpr(fn, b.map { it.name }), fn.returnType)
+    val inputSize = withSizeAccess(slot.name, slot.type)
+    return Rendered(b, listOf("$outputSize shouldBe $inputSize"))
+}
+
+private fun renderPermutationInvariant(fn: ParsedFunction, invariant: Invariant): Rendered? {
+    val b = signatureBounds(fn) ?: return null
+    val slot = resolveHintedSlot(fn, invariant.args.firstOrNull()) { isListType(it.type) }
+        ?: return null
+    val names = b.map { it.name }
+    val shuffled = names.map { if (it == slot.name) "$it.shuffled()" else it }
+    return Rendered(b, listOf("${callExpr(fn, names)} shouldBe ${callExpr(fn, shuffled)}"))
+}
+
+private fun renderNeverThrows(fn: ParsedFunction): Rendered? {
+    val b = signatureBounds(fn) ?: return null
+    return Rendered(b, listOf("shouldNotThrowAny { ${callExpr(fn, b.map { it.name })} }"))
+}
+
+private fun renderWithResult(fn: ParsedFunction, assertion: String): Rendered? {
+    val bounds = signatureBounds(fn) ?: return null
+    if (bounds.any { it.name == RESULT_NAME }) return null
+    val call = callExpr(fn, bounds.map { it.name })
+    return Rendered(bounds, listOf("val $RESULT_NAME = $call", assertion))
+}
+
+/**
+ *
+ * helper function for length preserving rendering.
+ * @return length or size access with correct syntax.
+ *
+ */
+private fun withSizeAccess(expr: String, type: String): String {
+    val op = if (type.trim().endsWith("?")) "?." else "."
+    return "$expr$op${sizeAccessor(type)}"
+}
+private fun sizeAccessor(type: String): String {
+    val base = baseTypeName(type)
+    return if (base == "String" || base == "CharSequence") "length" else "size"
+}
+
+/**
+ *
+ * helper function that returns correct type name.
+ *
+ */
+private fun baseTypeName(type: String): String =
+    type.substringBefore('<').removeSuffix("?").trim()
+
+private fun hasSize(type: String): Boolean = baseTypeName(type) in SIZED_TYPES
+private fun isListType(type: String): Boolean = baseTypeName(type) in LIST_TYPES
+
+/**
+ * Maps each slot to a [Bound] pairing its name with an Arb for its type.
+ *
+ * @param slots the typed slots to bind, in order.
+ * @return one [Bound] per slot, or `null` if any type is unsupported.
+ */
+private fun boundsFor(slots: List<TypedSlot>): List<Bound>? = slots.map {
+    Bound(it.name, arbForType(it.type) ?: return null)
+}
+
+/**
+ * Wrapper over [boundsFor] for a function's full signature —
+ * the receiver (if any) followed by its parameters, as given by [signatureSlots].
+ *
+ * @return one [Bound] per signature slot, or `null` if any parameter or the
+ * receiver has a type with no known Arb.
+ */
+private fun signatureBounds(fn: ParsedFunction) = boundsFor(signatureSlots(fn))
+private fun binaryOperandBounds(fn: ParsedFunction) = binaryOperandSlots(fn)?.let(::boundsFor)
+private fun callExpr(fn: ParsedFunction, args: List<String>): String =
+    if (fn.receiver != null)
+        "${args.first()}.${fn.name}(${args.drop(1).joinToString(", ")})"
+    else
+        "${fn.name}(${args.joinToString(", ")})"
+
+private fun freshName(existing: List<String>, base: String): String {
+    if (base !in existing) return base
+    var i = 2
+    while ("$base$i" in existing) i++
+    return "$base$i"
+}
+
+private fun binaryOperandSlots(fn: ParsedFunction): List<TypedSlot>? {
+    val slots = signatureSlots(fn)
+    if (slots.size != 2) return null
+    return if (slots[0].type.trim() == slots[1].type.trim()) slots else null
+}
+
+private fun arbForType(type: String): String? {
+    val t = type.trim()
+    val nullable = t.endsWith("?")
+    val core = t.removeSuffix("?").trim()
+    val arb = coreArb(core) ?: return null
+    return if (nullable) "$arb.orNull()" else arb
+}
+
+private fun resolveHintedSlot(
+    fn: ParsedFunction,
+    hint: String?,
+    predicate: (TypedSlot) -> Boolean
+): TypedSlot? {
+    val candidates = signatureSlots(fn).filter(predicate)
+    val hinted = hint?.let { h -> candidates.find { it.name == h } }
+    return hinted ?: candidates.singleOrNull()
+}
+
+

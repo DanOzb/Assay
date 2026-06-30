@@ -1,4 +1,4 @@
-package org.example.gen.pbt
+package org.example.gen.pbt.models
 
 import kotlinx.serialization.json.JsonObject
 
@@ -11,9 +11,12 @@ data class LlmRequest(
     val jsonSchema: JsonObject? = null,
     val temperature: Double = 0.2,
     val model: String? = null,
+    val think: Boolean? = null,
+    val numCtx: Int? = null,
 )
 
 data class LlmResponse(
     val model: String,
     val content: String,
+    val thinking: String? = null,
 )

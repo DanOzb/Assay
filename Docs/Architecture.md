@@ -6,6 +6,7 @@ Doc for visualizing current architecture
 Analysis API parser -> Pbt Generator
 Pbt Generator -> Ktor + Ollama models
 Ktor + Ollama models -> Invariant results
+Invariant results -> printed kotests
 
 ## Components 
 
@@ -29,5 +30,32 @@ Ktor + Ollama models -> Invariant results
 * Talks to the default ollama model for every parsed function. 
 * Prompts model to generate invariants for property based testing 
 
+```
+  InvariantPlan(
+    val decision: Decision,
+    val skipReason: String? = null,
+    val invariants: List<Invariant>? = null
+)   
+
+  Invariant(
+    val kind: String,
+    val testName: String,
+    @Serializable(with = FlexibleStringList::class)
+    val args: List<String> = emptyList(),
+    val value: String? = null,
+    val predicate: String? = null,
+    val reference: String? = null,
+    val code: String? = null,
+    val preconditions: List<Precondition> = emptyList(),
+)
+```
+
 ### Client
 * Only one client: Ollama, with an application content type as JSON
+
+### test generation 
+* first version of test generation developed for 10 invariants + custom code block
+
+### Utilities
+* Llm text output to JSON decoding 
+* String to list serializer in case llm outputs args as one string
