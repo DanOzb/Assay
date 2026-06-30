@@ -1,5 +1,12 @@
 # Logs 
 
+## [2026-06-30] Pivot from JSON schema to free text for pbt generation (PR #13)
+property test generation with the previously created schema was a fail. 
+The local model used (Qwen3:14b) struggled to output useful Json blocks. 
+The reason for this is that ollama models can't have thinking on while 
+also enforcing a schema, which forced the model to both make bad decisions. 
+The project had to pivot to free text + thinking on.
+
 ## [2026-06-25] Pivot to Invariant Generation via Assay (PR #4)
 **This is a log after a change** 
 The parsing and pbt generating phase was meant to go like this: 

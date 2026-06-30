@@ -4,6 +4,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.types.path
 import org.example.core.Parser
+import org.example.gen.pbt.PbtGenerator
 import org.jetbrains.kotlin.analysis.api.KaExperimentalApi
 import org.jetbrains.kotlin.analysis.api.standalone.disposeGlobalStandaloneApplicationServices
 
@@ -13,8 +14,9 @@ class Assay: CliktCommand() {
         .path(mustExist = true, canBeFile = false)
     override fun run() {
         val parser = Parser()
-        parser.inspectDir(path)
-
+        val list = parser.inspectDir(path)
+        val generator = PbtGenerator()
+        generator.run(list)
         //To stop global application services
         disposeGlobalStandaloneApplicationServices()
     }
