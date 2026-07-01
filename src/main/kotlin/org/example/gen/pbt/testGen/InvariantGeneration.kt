@@ -144,8 +144,7 @@ private fun boundsFor(slots: List<TypedSlot>): List<Bound>? = slots.map {
 }
 
 /**
- * Wrapper over [boundsFor] for a function's full signature —
- * the receiver (if any) followed by its parameters, as given by [signatureSlots].
+ * Wrapper over [boundsFor]
  *
  * @return one [Bound] per signature slot, or `null` if any parameter or the
  * receiver has a type with no known Arb.
@@ -171,14 +170,6 @@ private fun binaryOperandSlots(fn: ParsedFunction): List<TypedSlot>? {
     return if (slots[0].type.trim() == slots[1].type.trim()) slots else null
 }
 
-private fun arbForType(type: String): String? {
-    val t = type.trim()
-    val nullable = t.endsWith("?")
-    val core = t.removeSuffix("?").trim()
-    val arb = coreArb(core) ?: return null
-    return if (nullable) "$arb.orNull()" else arb
-}
-
 private fun resolveHintedSlot(
     fn: ParsedFunction,
     hint: String?,
@@ -189,4 +180,87 @@ private fun resolveHintedSlot(
     return hinted ?: candidates.singleOrNull()
 }
 
+/**
+ *
+ * Generates correct arb from parameter type.
+ * works recursively for list, map and triple types
+ * Also checks for nullable types
+ *
+ * @param type type of the parameter
+ * @return arb for the parameters type
+ *
+ */
+fun arbForType(type: String): String? {
+    val t = type.trim()
+    if (t.endsWith("?"))
+        return arbForType(t.removeSuffix("?").trim())?.let { "$it.orNull()" }
 
+    val name = t.substringBefore('<').trim()
+    val args = typeArgs(t)
+
+    return when (name) {
+        "Int"     -> "Arb.int()"
+        "Long"    -> "Arb.long()"
+        "Short"   -> "Arb.short()"
+        "Byte"    -> "Arb.byte()"
+        "Float"   -> "Arb.float()"
+        "Double"  -> "Arb.double()"
+        "Boolean" -> "Arb.boolean()"
+        "Char"    -> "Arb.char()"
+        "String"  -> "Arb.string()"
+
+        "List", "MutableList", "Collection", "Iterable" ->
+            args.singleOrNull()?.let { arbForType(it) }?.let { "Arb.list($it)" }
+        "Set", "MutableSet" ->
+            args.singleOrNull()?.let { arbForType(it) }?.let { "Arb.set($it)" }
+        "Array" ->
+            args.singleOrNull()?.let { arbForType(it) }?.let { "Arb.list($it).map { it.toTypedArray() }" }
+
+        "Map", "MutableMap" -> {
+            val (k, v) = args.takeIf { it.size == 2 } ?: return null
+            "Arb.map(${arbForType(k) ?: return null}, ${arbForType(v) ?: return null})"
+        }
+        "Pair" -> {
+            val (a, b) = args.takeIf { it.size == 2 } ?: return null
+            "Arb.pair(${arbForType(a) ?: return null}, ${arbForType(b) ?: return null})"
+        }
+        "Triple" -> {
+            val parts = args.takeIf { it.size == 3 } ?: return null
+            val arbs = parts.map { arbForType(it) ?: return null }
+            "Arb.triple(${arbs.joinToString(", ")})"
+        }
+
+        else -> null
+    }
+}
+
+/**
+ *
+ * checks if parameter type has arguments such as List<Int>.
+ * returns types in a list of strings
+ *
+ * @param type type of the parameter
+ * @return list of type arguments or empty list if none
+ *
+ */
+
+private fun typeArgs(type: String): List<String> {
+    val open = type.indexOf('<')
+    if (open == -1) return emptyList()
+    val close = type.lastIndexOf('>')
+    if (close <= open) return emptyList()
+
+    val inner = type.substring(open + 1, close)
+    val out = mutableListOf<String>()
+    var depth = 0
+    var start = 0
+    for (i in inner.indices) {
+        when (inner[i]) {
+            '<' -> depth++
+            '>' -> depth--
+            ',' -> if (depth == 0) { out += inner.substring(start, i).trim(); start = i + 1 }
+        }
+    }
+    out += inner.substring(start).trim()
+    return out.filter { it.isNotEmpty() }
+}
