@@ -6,7 +6,7 @@ import org.example.gen.pbt.models.TypedSlot
 private const val RECEIVER_NAME = "receiver"
 
 val LIST_TYPES = setOf("List", "MutableList", "Collection", "Iterable")
-val SIZED_TYPES = LIST_TYPES + setOf("String", "CharSequence", "Set", "MutableSet", "Array")
+val SIZED_TYPES = LIST_TYPES + setOf("String", "CharSequence", "Set", "MutableSet", "Array", "Map", "MutableMap")
 
 val KOTEST_IMPORTS = listOf(
     "import io.kotest.core.spec.style.FunSpec",
@@ -24,23 +24,3 @@ fun signatureSlots(fn: ParsedFunction): List<TypedSlot> =
     else
         emptyList()) + fn.params.map { TypedSlot(it.name, it.type) }
 
-fun coreArb(core: String): String? {
-    val name = core.substringBefore('<').trim()
-    val inner = core.substringAfter('<', "").substringBeforeLast('>', "").trim().ifEmpty { null }
-    return when (name) {
-        "Int" -> "Arb.int()"
-        "Long" -> "Arb.long()"
-        "Short" -> "Arb.short()"
-        "Byte" -> "Arb.byte()"
-        "Float" -> "Arb.float()"
-        "Double" -> "Arb.double()"
-        "Boolean" -> "Arb.boolean()"
-        "Char" -> "Arb.char()"
-        "String" -> "Arb.string()"
-        "List", "MutableList", "Collection", "Iterable" ->
-            inner?.let { coreArb(it) }?.let { "Arb.list($it)" }
-        "Set", "MutableSet" ->
-            inner?.let { coreArb(it) }?.let { "Arb.set($it)" }
-        else -> null
-    }
-}
