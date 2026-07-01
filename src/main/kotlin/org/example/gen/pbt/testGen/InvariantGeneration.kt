@@ -199,15 +199,24 @@ fun arbForType(type: String): String? {
     val args = typeArgs(t)
 
     return when (name) {
-        "Int"     -> "Arb.int()"
-        "Long"    -> "Arb.long()"
-        "Short"   -> "Arb.short()"
-        "Byte"    -> "Arb.byte()"
-        "Float"   -> "Arb.float()"
-        "Double"  -> "Arb.double()"
+        "Int" -> "Arb.int()"
+        "Long" -> "Arb.long()"
+        "Short" -> "Arb.short()"
+        "Byte" -> "Arb.byte()"
+        "Float" -> "Arb.float()"
+        "Double" -> "Arb.double()"
         "Boolean" -> "Arb.boolean()"
-        "Char"    -> "Arb.char()"
-        "String"  -> "Arb.string()"
+        "Char" -> "Arb.char()"
+        "String" -> "Arb.string()"
+        
+        "IntArray" -> "Arb.list(Arb.int()).map { it.toIntArray() }"
+        "LongArray" -> "Arb.list(Arb.long()).map { it.toLongArray() }"
+        "ShortArray" -> "Arb.list(Arb.short()).map { it.toShortArray() }"
+        "ByteArray" -> "Arb.list(Arb.byte()).map { it.toByteArray() }"
+        "CharArray" -> "Arb.list(Arb.char()).map { it.toCharArray() }"
+        "FloatArray" -> "Arb.list(Arb.float()).map { it.toFloatArray() }"
+        "DoubleArray" -> "Arb.list(Arb.double()).map { it.toDoubleArray() }"
+        "BooleanArray" -> "Arb.list(Arb.boolean()).map { it.toBooleanArray() }"
 
         "List", "MutableList", "Collection", "Iterable" ->
             args.singleOrNull()?.let { arbForType(it) }?.let { "Arb.list($it)" }

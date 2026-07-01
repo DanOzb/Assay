@@ -6,7 +6,22 @@ import org.example.gen.pbt.models.TypedSlot
 private const val RECEIVER_NAME = "receiver"
 
 val LIST_TYPES = setOf("List", "MutableList", "Collection", "Iterable")
-val SIZED_TYPES = LIST_TYPES + setOf("String", "CharSequence", "Set", "MutableSet", "Array", "Map", "MutableMap")
+val SIZED_TYPES = LIST_TYPES + setOf(
+    "String",
+    "CharSequence",
+    "Set",
+    "MutableSet",
+    "Array",
+    "Map",
+    "MutableMap",
+    "IntArray",
+    "LongArray",
+    "ShortArray",
+    "ByteArray",
+    "CharArray",
+    "FloatArray",
+    "DoubleArray",
+    "BooleanArray",)
 
 val KOTEST_IMPORTS = listOf(
     "import io.kotest.core.spec.style.FunSpec",

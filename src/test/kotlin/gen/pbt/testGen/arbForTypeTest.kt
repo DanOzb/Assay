@@ -62,7 +62,6 @@ class ArbForTypeTest : FunSpec({
     context("unsupported -> null") {
         val types = listOf(
             "Widget",
-            "IntArray",
             "List<Widget>",
             "Map<String, Widget>",
             "Set<Widget>",
