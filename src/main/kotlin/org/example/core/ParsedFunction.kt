@@ -17,4 +17,24 @@ data class ParsedFunction(
     val annotations: List<AnnotationModel>,
     val body: String?,
     val isSuspend: Boolean,
+    val callability: Callability = Callability.TOP_LEVEL,
+    val container: ContainerModel? = null,
     )
+
+enum class Callability { TOP_LEVEL, SINGLETON, REQUIRES_INSTANCE, LOCAL, }
+enum class ContainerKind { CLASS, INTERFACE, OBJECT, COMPANION_OBJECT, ENUM }
+data class ContainerModel(
+    val name: String,
+    val fqName: String,
+    val kind: ContainerKind,
+    val instanceStructure: InstanceStructure,
+    val isInner: Boolean = false,
+    val hasMutableState: Boolean = false,
+)
+
+sealed interface InstanceStructure {
+    data object Singleton : InstanceStructure
+    data class Construct(val params: List<ParsedParam>) : InstanceStructure
+    data class EnumEntries(val entries: List<String>) : InstanceStructure
+    data class NotConstructible(val reason: String) : InstanceStructure
+}

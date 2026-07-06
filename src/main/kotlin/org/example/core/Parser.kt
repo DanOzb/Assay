@@ -11,13 +11,21 @@ import org.jetbrains.kotlin.analysis.project.structure.builder.buildKtSourceModu
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.platform.jvm.JvmPlatforms
 import org.jetbrains.kotlin.psi.KtClass
+import org.jetbrains.kotlin.psi.KtClassOrObject
+import org.jetbrains.kotlin.psi.KtEnumEntry
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNamedFunction
+import org.jetbrains.kotlin.psi.KtObjectDeclaration
+import org.jetbrains.kotlin.psi.KtParameter
+import org.jetbrains.kotlin.psi.KtPrimaryConstructor
+import org.jetbrains.kotlin.psi.KtProperty
+import org.jetbrains.kotlin.psi.KtTreeVisitorVoid
+import org.jetbrains.kotlin.psi.psiUtil.containingClassOrObject
 import org.jetbrains.kotlin.types.Variance
 import java.nio.file.Path
 
 class Parser {
-    fun inspectDir(path: Path): List<ParsedFunction>{
+    fun inspectDir(path: Path): List<ParsedFunction> {
         val projectDisposable = Disposer.newDisposable("MyStandaloneAnalysisSession")
         try {
             val session = buildStandaloneAnalysisAPISession(projectDisposable = projectDisposable) {
@@ -38,14 +46,24 @@ class Parser {
             val ktFiles: List<KtFile> = session.modulesWithFiles.values.flatten().filterIsInstance<KtFile>()
 
             return ktFiles.flatMap { file ->
-                analyze(file){
-                    file.declarations.filterIsInstance<KtNamedFunction>()
-                        .map { parseFunction(it) }
+                analyze(file) {
+                    collectNamedFunctions(file).map { parseFunction(it) }
                 }
             }
         } finally {
             Disposer.dispose(projectDisposable)
         }
+    }
+
+    private fun collectNamedFunctions(file: KtFile): List<KtNamedFunction> {
+        val found = mutableListOf<KtNamedFunction>()
+        file.accept(object : KtTreeVisitorVoid() {
+            override fun visitNamedFunction(function: KtNamedFunction) {
+                found += function
+                super.visitNamedFunction(function)
+            }
+        })
+        return found
     }
 
     @OptIn(KaExperimentalApi::class)
@@ -73,7 +91,9 @@ class Parser {
             docs = fn.docComment?.text,
             annotations = fn.parseAnnotations(),
             body = fn.bodyExpression?.text,
-            isSuspend = fn.hasModifier(KtTokens.SUSPEND_KEYWORD)
+            isSuspend = fn.hasModifier(KtTokens.SUSPEND_KEYWORD),
+            callability = callabilityOf(fn),
+            container = fn.containingClassOrObject?.let { parseContainer(it) },
         )
     }
 
@@ -84,8 +104,93 @@ class Parser {
                 arguments = entry.valueArguments.map { arg ->
                     val argName = arg.getArgumentName()?.asName?.asString()
                     val value = arg.getArgumentExpression()?.text.orEmpty()
-                    if(argName != null) "$argName=$value" else value
+                    if (argName != null) "$argName=$value" else value
                 }
             )
         }
+
+    private fun callabilityOf(fn: KtNamedFunction): Callability {
+        if (fn.isLocal) return Callability.LOCAL
+        val container = fn.containingClassOrObject ?: return Callability.TOP_LEVEL
+        return when {
+            container.isLocal || container.name == null -> Callability.LOCAL
+            container is KtObjectDeclaration -> Callability.SINGLETON
+            else -> Callability.REQUIRES_INSTANCE
+        }
+    }
+
+    @OptIn(KaExperimentalApi::class)
+    private fun KaSession.parseContainer(cls: KtClassOrObject): ContainerModel {
+        val kind = containerKindOf(cls)
+        return ContainerModel(
+            name = cls.name ?: "<anonymous>",
+            fqName = cls.fqName?.asString() ?: cls.name.orEmpty(),
+            kind = kind,
+            instanceStructure = getInstanceStructure(cls, kind),
+            isInner = (cls as? KtClass)?.isInner() == true,
+            hasMutableState = hasMutableState(cls),
+        )
+    }
+
+    private fun containerKindOf(cls: KtClassOrObject): ContainerKind = when {
+        cls is KtObjectDeclaration && cls.isCompanion() -> ContainerKind.COMPANION_OBJECT
+        cls is KtObjectDeclaration -> ContainerKind.OBJECT
+        cls is KtClass && cls.isInterface() -> ContainerKind.INTERFACE
+        cls is KtClass && cls.isEnum() -> ContainerKind.ENUM
+        else -> ContainerKind.CLASS
+    }
+
+    private fun KaSession.getInstanceStructure(
+        cls: KtClassOrObject,
+        kind: ContainerKind,
+    ): InstanceStructure = when (kind) {
+        ContainerKind.OBJECT,
+        ContainerKind.COMPANION_OBJECT -> InstanceStructure.Singleton
+
+        ContainerKind.INTERFACE -> InstanceStructure.NotConstructible("interface")
+
+        ContainerKind.ENUM -> InstanceStructure.EnumEntries(cls.enumEntryNames())
+
+        ContainerKind.CLASS -> classInstanceStructure(cls)
+    }
+
+    private fun KtClassOrObject.enumEntryNames(): List<String> =
+        declarations.filterIsInstance<KtEnumEntry>().mapNotNull { it.name }
+
+    private fun KaSession.classInstanceStructure(cls: KtClassOrObject): InstanceStructure {
+        nonConstructibleReason(cls)?.let { return InstanceStructure.NotConstructible(it) }
+        return InstanceStructure.Construct(constructorParams(cls))
+    }
+
+    private fun nonConstructibleReason(cls: KtClassOrObject): String? = when {
+        cls is KtClass && cls.isAnnotation() -> "annotation class"
+        cls.hasModifier(KtTokens.ABSTRACT_KEYWORD) -> "abstract class"
+        cls.hasModifier(KtTokens.SEALED_KEYWORD) -> "sealed class"
+        cls.primaryConstructor?.isNonPublic() == true -> "non-public primary constructor"
+        else -> null
+    }
+
+    private fun KtPrimaryConstructor.isNonPublic(): Boolean =
+        hasModifier(KtTokens.PRIVATE_KEYWORD) || hasModifier(KtTokens.PROTECTED_KEYWORD)
+
+    @OptIn(KaExperimentalApi::class)
+    private fun KaSession.constructorParams(cls: KtClassOrObject): List<ParsedParam> =
+        cls.primaryConstructor
+            ?.valueParameters
+            ?.map { toParsedParam(it) }
+            .orEmpty()
+
+    @OptIn(KaExperimentalApi::class)
+    private fun KaSession.toParsedParam(param: KtParameter): ParsedParam =
+        ParsedParam(
+            name = param.name ?: "_",
+            type = param.symbol.returnType.render(
+                KaTypeRendererForSource.WITH_SHORT_NAMES,
+                Variance.INVARIANT,
+            ),
+        )
+
+    private fun hasMutableState(cls: KtClassOrObject): Boolean =
+        cls.primaryConstructor?.valueParameters?.any { it.isMutable } == true ||
+                cls.declarations.filterIsInstance<KtProperty>().any { it.isVar }
 }
