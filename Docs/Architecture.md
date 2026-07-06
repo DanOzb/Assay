@@ -11,7 +11,7 @@ Invariant results -> printed kotests
 ## Components 
 
 ### Parsing
-* Parses TOP_LEVEL functions in a kotlin project and returns a list of parsed functions: 
+* Parses functions and its container in a kotlin project and returns a list of parsed functions: 
 ```
   ParsedFunction(
     val name: String,
@@ -24,8 +24,12 @@ Invariant results -> printed kotests
     val annotations: List<AnnotationModel>,
     val body: String?,
     val isSuspend: Boolean,
+    val callability: Callability = Callability.TOP_LEVEL,
+    val container: ContainerModel? = null,
     )
 ```    
+More details on parsed function can be found in ``` src/main/kotlin/org/example/core/ParsedFunction.kt ```
+
 ### Pbt generation
 * Talks to the default ollama model for every parsed function. 
 * Prompts model to generate invariants for property based testing 
