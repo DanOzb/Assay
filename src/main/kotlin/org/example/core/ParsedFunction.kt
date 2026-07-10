@@ -1,5 +1,23 @@
 package org.example.core
 
+
+enum class Callability { TOP_LEVEL, SINGLETON, REQUIRES_INSTANCE, LOCAL, }
+enum class ContainerKind { CLASS, INTERFACE, OBJECT, COMPANION_OBJECT, ENUM }
+
+sealed interface Origin {
+    data object TopLevel : Origin
+    data object Local : Origin
+    data class Member(val container: ContainerModel) : Origin
+}
+
+sealed interface InstanceStructure {
+    data object Singleton : InstanceStructure
+    data class Construct(val params: List<ParsedParam>) : InstanceStructure
+    data class EnumEntries(val entries: List<String>) : InstanceStructure
+    data class NotConstructible(val reason: String) : InstanceStructure
+}
+
+
 data class ParsedParam(val name: String, val type: String)
 data class AnnotationModel(
     val name: String,
@@ -17,12 +35,9 @@ data class ParsedFunction(
     val annotations: List<AnnotationModel>,
     val body: String?,
     val isSuspend: Boolean,
-    val callability: Callability = Callability.TOP_LEVEL,
-    val container: ContainerModel? = null,
+    val origin: Origin,
     )
 
-enum class Callability { TOP_LEVEL, SINGLETON, REQUIRES_INSTANCE, LOCAL, }
-enum class ContainerKind { CLASS, INTERFACE, OBJECT, COMPANION_OBJECT, ENUM }
 data class ContainerModel(
     val name: String,
     val fqName: String,
@@ -32,9 +47,3 @@ data class ContainerModel(
     val hasMutableState: Boolean = false,
 )
 
-sealed interface InstanceStructure {
-    data object Singleton : InstanceStructure
-    data class Construct(val params: List<ParsedParam>) : InstanceStructure
-    data class EnumEntries(val entries: List<String>) : InstanceStructure
-    data class NotConstructible(val reason: String) : InstanceStructure
-}

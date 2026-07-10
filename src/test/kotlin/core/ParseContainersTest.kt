@@ -8,12 +8,22 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
-import org.example.core.Callability
-import org.example.core.ContainerKind
-import org.example.core.InstanceStructure
-import org.example.core.ParsedFunction
-import org.example.core.Parser
+import org.example.core.*
 import java.nio.file.Paths
+
+val Origin.callability: Callability get() = when (this) {
+    Origin.TopLevel -> Callability.TOP_LEVEL
+    Origin.Local -> Callability.LOCAL
+    is Origin.Member -> when (container.instanceStructure) {
+        InstanceStructure.Singleton -> Callability.SINGLETON
+        else -> Callability.REQUIRES_INSTANCE
+    }
+}
+private val ParsedFunction.callability: Callability
+    get() = origin.callability
+
+private val ParsedFunction.container: ContainerModel?
+    get() = (origin as? Origin.Member)?.container
 
 class ParseContainersTest : FunSpec({
 
