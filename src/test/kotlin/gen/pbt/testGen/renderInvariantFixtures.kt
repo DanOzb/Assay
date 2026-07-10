@@ -1,5 +1,6 @@
 package org.example.gen.pbt.testGen
 
+import org.example.core.Origin
 import org.example.core.ParsedFunction
 import org.example.core.ParsedParam
 import org.example.gen.pbt.models.Invariant
@@ -26,6 +27,7 @@ fun fn(
     annotations = emptyList(),
     body = null,
     isSuspend = false,
+    origin = Origin.TopLevel,
 )
 
 fun invariant(

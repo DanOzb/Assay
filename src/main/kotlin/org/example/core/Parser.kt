@@ -92,8 +92,7 @@ class Parser {
             annotations = fn.parseAnnotations(),
             body = fn.bodyExpression?.text,
             isSuspend = fn.hasModifier(KtTokens.SUSPEND_KEYWORD),
-            callability = callabilityOf(fn),
-            container = fn.containingClassOrObject?.let { parseContainer(it) },
+            origin = originOf(fn),
         )
     }
 
@@ -109,14 +108,11 @@ class Parser {
             )
         }
 
-    private fun callabilityOf(fn: KtNamedFunction): Callability {
-        if (fn.isLocal) return Callability.LOCAL
-        val container = fn.containingClassOrObject ?: return Callability.TOP_LEVEL
-        return when {
-            container.isLocal || container.name == null -> Callability.LOCAL
-            container is KtObjectDeclaration -> Callability.SINGLETON
-            else -> Callability.REQUIRES_INSTANCE
-        }
+    private fun KaSession.originOf(fn: KtNamedFunction): Origin {
+        if (fn.isLocal) return Origin.Local
+        val container = fn.containingClassOrObject ?: return Origin.TopLevel
+        if (container.isLocal || container.name == null) return Origin.Local
+        return Origin.Member(parseContainer(container))
     }
 
     @OptIn(KaExperimentalApi::class)
@@ -132,11 +128,11 @@ class Parser {
         )
     }
 
-    private fun containerKindOf(cls: KtClassOrObject): ContainerKind = when {
-        cls is KtObjectDeclaration && cls.isCompanion() -> ContainerKind.COMPANION_OBJECT
-        cls is KtObjectDeclaration -> ContainerKind.OBJECT
-        cls is KtClass && cls.isInterface() -> ContainerKind.INTERFACE
-        cls is KtClass && cls.isEnum() -> ContainerKind.ENUM
+    private fun containerKindOf(cls: KtClassOrObject): ContainerKind = when (cls) {
+        is KtObjectDeclaration if cls.isCompanion() -> ContainerKind.COMPANION_OBJECT
+        is KtObjectDeclaration -> ContainerKind.OBJECT
+        is KtClass if cls.isInterface() -> ContainerKind.INTERFACE
+        is KtClass if cls.isEnum() -> ContainerKind.ENUM
         else -> ContainerKind.CLASS
     }
 

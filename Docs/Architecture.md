@@ -24,8 +24,7 @@ Invariant results -> printed kotests
     val annotations: List<AnnotationModel>,
     val body: String?,
     val isSuspend: Boolean,
-    val callability: Callability = Callability.TOP_LEVEL,
-    val container: ContainerModel? = null,
+    val origin: Origin,
     )
 ```    
 More details on parsed function can be found in ``` src/main/kotlin/org/example/core/ParsedFunction.kt ```

@@ -2,6 +2,7 @@ package gen
 
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import org.example.core.Origin
 import org.example.core.ParsedFunction
 import org.example.core.ParsedParam
 import org.example.gen.pbt.formatParams
@@ -20,6 +21,7 @@ class PbtGeneratorTest: FunSpec({
         annotations = emptyList(),
         body = null,
         isSuspend = false,
+        origin = Origin.TopLevel,
     )
 
     val notEmpty = ParsedFunction(
@@ -36,6 +38,7 @@ class PbtGeneratorTest: FunSpec({
         annotations = emptyList(),
         body = null,
         isSuspend = false,
+        origin = Origin.TopLevel,
     )
 
     test("format params renders 'none' when there is no params"){
