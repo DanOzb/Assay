@@ -22,6 +22,7 @@ class PbtGeneratorTest: FunSpec({
         body = null,
         isSuspend = false,
         origin = Origin.TopLevel,
+        packageName = "",
     )
 
     val notEmpty = ParsedFunction(
@@ -39,6 +40,7 @@ class PbtGeneratorTest: FunSpec({
         body = null,
         isSuspend = false,
         origin = Origin.TopLevel,
+        packageName = "",
     )
 
     test("format params renders 'none' when there is no params"){

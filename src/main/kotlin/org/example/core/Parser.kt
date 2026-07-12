@@ -93,6 +93,7 @@ class Parser {
             body = fn.bodyExpression?.text,
             isSuspend = fn.hasModifier(KtTokens.SUSPEND_KEYWORD),
             origin = originOf(fn),
+            packageName = fn.containingKtFile.packageFqName.asString(),
         )
     }
 

@@ -7,7 +7,7 @@ fun generateTestClass(fn: ParsedFunction, invPlan: InvariantPlan): String {
     val invariants = invPlan.invariants?.takeIf { it.isNotEmpty() } ?: return ""
 
     val tests = invariants.joinToString("\n\n") { generateTestFunction(fn, it) }
-    val pkg = packageOf(fn)
+    val pkg = fn.packageName
 
     return buildString {
         if (pkg.isNotEmpty()) {
@@ -20,11 +20,6 @@ fun generateTestClass(fn: ParsedFunction, invPlan: InvariantPlan): String {
         appendLine(tests.prependIndent("    "))
         append("})")
     }
-}
-
-fun packageOf(fn: ParsedFunction): String {
-    val fq = fn.fullName
-    return if ('.' in fq) fq.substringBeforeLast('.') else ""
 }
 
 private fun testClassName(fn: ParsedFunction): String =

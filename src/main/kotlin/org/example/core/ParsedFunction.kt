@@ -36,6 +36,7 @@ data class ParsedFunction(
     val body: String?,
     val isSuspend: Boolean,
     val origin: Origin,
+    val packageName: String,
     )
 
 data class ContainerModel(
