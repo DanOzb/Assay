@@ -25,6 +25,7 @@ Invariant results -> printed kotests
     val body: String?,
     val isSuspend: Boolean,
     val origin: Origin,
+    val packageName: String,
     )
 ```    
 More details on parsed function can be found in ``` src/main/kotlin/org/example/core/ParsedFunction.kt ```

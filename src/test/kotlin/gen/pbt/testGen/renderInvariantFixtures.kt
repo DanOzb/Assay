@@ -28,6 +28,7 @@ fun fn(
     body = null,
     isSuspend = false,
     origin = Origin.TopLevel,
+    packageName = "",
 )
 
 fun invariant(
