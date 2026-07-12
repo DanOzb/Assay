@@ -4,6 +4,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
+import org.example.core.Origin
 import org.example.core.ParsedFunction
 import org.example.gen.clients.OllamaClient
 import org.example.gen.pbt.models.Decision
@@ -20,6 +21,14 @@ class PbtGenerator {
         coerceInputValues = true
     }
 
+    private fun skip(fn: ParsedFunction): Boolean {
+        if(fn.origin != Origin.TopLevel || fn.visibility != "public") {
+            println("Skipping ${fn.fullName} because only top level functions are supported for now")
+            return true;
+        }
+        return false;
+    }
+
     fun run(functions: List<ParsedFunction>) {
         val invPlans: Map<ParsedFunction, InvariantPlan> = generateInvariants(functions)
         generateTests(invPlans)
@@ -31,6 +40,7 @@ class PbtGenerator {
         runBlocking {
             OllamaClient().use { client ->
                 for (fn in functions) {
+                    if(skip(fn)) continue;
                     println("STARTING INVARIANT GENERATION FOR FUNCTION ${fn.name}")
 
                     val params = fn.formatParams()
