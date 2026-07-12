@@ -1,5 +1,11 @@
 # Logs 
 
+## [2026-07-12] Only top-level and public functions get tests generated
+Currently haven't decided if tests will live inside the target projects
+test folder or not, so I have decided to skip internal functions aswell.
+Logic for container functions haven't been added yet, so anything but 
+top-level functions get skipped on that matter. 
+
 ## [2026-06-30] Pivot from JSON schema to free text for pbt generation (PR #13)
 property test generation with the previously created schema was a fail. 
 The local model used (Qwen3:14b) struggled to output useful Json blocks. 
