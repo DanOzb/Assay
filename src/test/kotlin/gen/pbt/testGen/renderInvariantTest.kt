@@ -237,7 +237,7 @@ class RenderInvariantTest : FunSpec({
         test("binds result and asserts the predicate") {
             renderInvariant(Fns.parsePositive, Invs.outputConstraint) shouldBe Rendered(
                 bounds = listOf(Bound("s", "Arb.string()")),
-                body = listOf("val result = parsePositive(s)", "result >= 0 shouldBe true"),
+                body = listOf("val result = parsePositive(s)", "(result >= 0) shouldBe true"),
             )
         }
         test("returns null when predicate is missing") {

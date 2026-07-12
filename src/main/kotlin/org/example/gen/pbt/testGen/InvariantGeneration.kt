@@ -25,7 +25,7 @@ fun renderInvariant(fn: ParsedFunction, invariant: Invariant): Rendered? {
         "length_preserving" -> renderLengthPreserving(fn, invariant)
         "permutation_invariant" -> renderPermutationInvariant(fn, invariant)
         "never_throws" -> renderNeverThrows(fn)
-        "output_constraint" -> invariant.predicate?.let { renderWithResult(fn, "${invariant.predicate} shouldBe true") }
+        "output_constraint" -> invariant.predicate?.let { renderWithResult(fn, "(${invariant.predicate}) shouldBe true") }
         "oracle" -> invariant.reference?.let { renderWithResult(fn, "$RESULT_NAME shouldBe $it") }
         "custom" -> invariant.code?.let {renderWithResult(fn, it)}
         else -> null
