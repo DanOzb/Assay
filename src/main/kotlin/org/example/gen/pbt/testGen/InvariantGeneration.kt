@@ -115,11 +115,8 @@ private fun renderWithResult(fn: ParsedFunction, assertion: String): Rendered? {
  */
 private fun withSizeAccess(expr: String, type: String): String {
     val op = if (type.trim().endsWith("?")) "?." else "."
-    return "$expr$op${sizeAccessor(type)}"
-}
-private fun sizeAccessor(type: String): String {
-    val base = baseTypeName(type)
-    return if (base == "String" || base == "CharSequence") "length" else "size"
+    val member = if(baseTypeName(type) in setOf("String", "CharSequence")) "length" else "size"
+    return "$expr$op$member"
 }
 
 /**
