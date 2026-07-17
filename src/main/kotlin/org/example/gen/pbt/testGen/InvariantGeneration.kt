@@ -83,7 +83,7 @@ private fun renderLengthPreserving(fn: ParsedFunction, invariant: Invariant): Re
 
 private fun renderPermutationInvariant(fn: ParsedFunction, invariant: Invariant): Rendered? {
     val b = signatureBounds(fn) ?: return null
-    val slot = resolveHintedSlot(fn, invariant.args.firstOrNull()) { isListType(it.type) }
+    val slot = resolveHintedSlot(fn, invariant.args.firstOrNull()) { baseTypeName(it.type) in LIST_TYPES }
         ?: return null
     val names = b.map { it.name }
     val shuffled = names.map { if (it == slot.name) "$it.shuffled()" else it }
@@ -123,7 +123,6 @@ private fun baseTypeName(type: String): String =
     type.substringBefore('<').removeSuffix("?").trim()
 
 private fun hasSize(type: String): Boolean = baseTypeName(type) in SIZED_TYPES
-private fun isListType(type: String): Boolean = baseTypeName(type) in LIST_TYPES
 
 /**
  * Maps each slot to a [Bound] pairing its name with an Arb for its type.
