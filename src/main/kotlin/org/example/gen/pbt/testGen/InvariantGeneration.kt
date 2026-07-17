@@ -25,7 +25,7 @@ fun renderInvariant(fn: ParsedFunction, invariant: Invariant): Rendered? {
         "length_preserving" -> renderLengthPreserving(fn, invariant)
         "permutation_invariant" -> renderPermutationInvariant(fn, invariant)
         "never_throws" -> renderNeverThrows(fn)
-        "output_constraint" -> invariant.predicate?.let { renderWithResult(fn, "(${invariant.predicate}) shouldBe true") }
+        "output_constraint" -> invariant.predicate?.let { renderWithResult(fn, "($it) shouldBe true") }
         "oracle" -> invariant.reference?.let { renderWithResult(fn, "$RESULT_NAME shouldBe $it") }
         "custom" -> invariant.code?.let {renderWithResult(fn, it)}
         else -> null
@@ -33,19 +33,14 @@ fun renderInvariant(fn: ParsedFunction, invariant: Invariant): Rendered? {
 }
 
 private fun renderInvolutionOrIdempotent(fn: ParsedFunction, invariant: Invariant): Rendered? {
-    val b = signatureBounds(fn) ?: return null
-    if (b.size != 1) return null
-    val x = b.first().name
-    val once = callExpr(fn, listOf(x))
-    val body = if (invariant.kind == "involution")
-        "${callExpr(fn, listOf(once))} shouldBe $x"
-    else
-        "${callExpr(fn, listOf(once))} shouldBe $once"
-    return Rendered(b, listOf(body))
+    val bound = signatureBounds(fn)?.singleOrNull() ?: return null
+    val once = callExpr(fn, listOf(bound.name))
+    val rhs = if(invariant.kind == "involution") bound.name else once
+    return Rendered(listOf(bound), listOf("${callExpr(fn, listOf(once))} shouldBe $rhs"))
 }
 
 private fun renderCommutative(fn: ParsedFunction): Rendered? {
-    val ops = binaryOperandBounds(fn) ?: return null
+    val ops = binaryOperandSlots(fn)?.let(::boundsFor) ?: return null
     val (a, c) = ops.map { it.name }
     return Rendered(ops, listOf("${callExpr(fn, listOf(a, c))} shouldBe ${callExpr(fn, listOf(c, a))}"))
 }
@@ -88,7 +83,7 @@ private fun renderLengthPreserving(fn: ParsedFunction, invariant: Invariant): Re
 
 private fun renderPermutationInvariant(fn: ParsedFunction, invariant: Invariant): Rendered? {
     val b = signatureBounds(fn) ?: return null
-    val slot = resolveHintedSlot(fn, invariant.args.firstOrNull()) { isListType(it.type) }
+    val slot = resolveHintedSlot(fn, invariant.args.firstOrNull()) { baseTypeName(it.type) in LIST_TYPES }
         ?: return null
     val names = b.map { it.name }
     val shuffled = names.map { if (it == slot.name) "$it.shuffled()" else it }
@@ -115,11 +110,8 @@ private fun renderWithResult(fn: ParsedFunction, assertion: String): Rendered? {
  */
 private fun withSizeAccess(expr: String, type: String): String {
     val op = if (type.trim().endsWith("?")) "?." else "."
-    return "$expr$op${sizeAccessor(type)}"
-}
-private fun sizeAccessor(type: String): String {
-    val base = baseTypeName(type)
-    return if (base == "String" || base == "CharSequence") "length" else "size"
+    val member = if(baseTypeName(type) in setOf("String", "CharSequence")) "length" else "size"
+    return "$expr$op$member"
 }
 
 /**
@@ -131,7 +123,6 @@ private fun baseTypeName(type: String): String =
     type.substringBefore('<').removeSuffix("?").trim()
 
 private fun hasSize(type: String): Boolean = baseTypeName(type) in SIZED_TYPES
-private fun isListType(type: String): Boolean = baseTypeName(type) in LIST_TYPES
 
 /**
  * Maps each slot to a [Bound] pairing its name with an Arb for its type.
@@ -150,7 +141,6 @@ private fun boundsFor(slots: List<TypedSlot>): List<Bound>? = slots.map {
  * receiver has a type with no known Arb.
  */
 private fun signatureBounds(fn: ParsedFunction) = boundsFor(signatureSlots(fn))
-private fun binaryOperandBounds(fn: ParsedFunction) = binaryOperandSlots(fn)?.let(::boundsFor)
 private fun callExpr(fn: ParsedFunction, args: List<String>): String =
     if (fn.receiver != null)
         "${args.first()}.${fn.name}(${args.drop(1).joinToString(", ")})"
