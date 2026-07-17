@@ -33,15 +33,10 @@ fun renderInvariant(fn: ParsedFunction, invariant: Invariant): Rendered? {
 }
 
 private fun renderInvolutionOrIdempotent(fn: ParsedFunction, invariant: Invariant): Rendered? {
-    val b = signatureBounds(fn) ?: return null
-    if (b.size != 1) return null
-    val x = b.first().name
-    val once = callExpr(fn, listOf(x))
-    val body = if (invariant.kind == "involution")
-        "${callExpr(fn, listOf(once))} shouldBe $x"
-    else
-        "${callExpr(fn, listOf(once))} shouldBe $once"
-    return Rendered(b, listOf(body))
+    val bound = signatureBounds(fn)?.singleOrNull() ?: return null
+    val once = callExpr(fn, listOf(bound.name))
+    val rhs = if(invariant.kind == "involution") bound.name else once
+    return Rendered(listOf(bound), listOf("${callExpr(fn, listOf(once))} shouldBe $rhs"))
 }
 
 private fun renderCommutative(fn: ParsedFunction): Rendered? {
