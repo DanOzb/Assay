@@ -45,7 +45,7 @@ private fun renderInvolutionOrIdempotent(fn: ParsedFunction, invariant: Invarian
 }
 
 private fun renderCommutative(fn: ParsedFunction): Rendered? {
-    val ops = binaryOperandBounds(fn) ?: return null
+    val ops = binaryOperandSlots(fn)?.let(::boundsFor) ?: return null
     val (a, c) = ops.map { it.name }
     return Rendered(ops, listOf("${callExpr(fn, listOf(a, c))} shouldBe ${callExpr(fn, listOf(c, a))}"))
 }
@@ -150,7 +150,6 @@ private fun boundsFor(slots: List<TypedSlot>): List<Bound>? = slots.map {
  * receiver has a type with no known Arb.
  */
 private fun signatureBounds(fn: ParsedFunction) = boundsFor(signatureSlots(fn))
-private fun binaryOperandBounds(fn: ParsedFunction) = binaryOperandSlots(fn)?.let(::boundsFor)
 private fun callExpr(fn: ParsedFunction, args: List<String>): String =
     if (fn.receiver != null)
         "${args.first()}.${fn.name}(${args.drop(1).joinToString(", ")})"
